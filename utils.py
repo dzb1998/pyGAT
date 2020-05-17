@@ -19,30 +19,32 @@ def load_data(path="./data/cora/", dataset="cora"):
     """Load citation network dataset (cora only for now)"""
     print('Loading {} dataset...'.format(dataset))
 
-    with open('entities.dict') as fin:
-    entity2id = dict()
-    id2entity = dict()
-    for line in fin:
-        eid, entity = line.strip().split('\t')
-        entity2id[entity] = int(eid)
-        id2entity[int(eid)] = entity
+    with open('data/kg/entities.dict') as fin:
+        entity2id = dict()
+        id2entity = dict()
+        for line in fin:
+            eid, entity = line.strip().split('\t')
+            entity2id[entity] = int(eid)
+            id2entity[int(eid)] = entity
 
     row_1 = []
-    row_1 = []
+    row_2 = []
 
-    with open('output1.csv') as fin:
+    with open('data/kg/output1.csv') as fin:
         for row in csv.reader(fin, delimiter=','):
             if row[0] == '':
                 continue
             # print(row)
-            row_1 = entity2id[row[1]]
-            row_2 = row[2].strip('][').split(', ')
+            row_1_ = entity2id[row[1]]
+            row_2_ = row[2].strip('][').split(', ')
             # print(row_2)
-            row_2 = [float(i) for i in row_2]
-            print(row_1)
-            print(row_2)
+            row_2_ = [float(i) for i in row_2_]
+            row_1.append(row_1_)
+            row_2.append(row_2_)
+            # print(row_1)
+            # print(row_2)
 
-
+    print(row_1)
 
 
 
@@ -51,8 +53,13 @@ def load_data(path="./data/cora/", dataset="cora"):
     labels = encode_onehot(idx_features_labels[:, -1])
 
     # build graph
-    idx = np.array(idx_features_labels[:, 0], dtype=np.int32)
-    idx_map = {j: i for i, j in enumerate(idx)}
+    
+#    idx = np.array(idx_features_labels[:, 0], dtype=np.int32)
+#    print(idx)
+    idx_ = np.array(row_1, dtype=np.int32)
+    print(idx_)
+    
+    idx_map = {j: i for i, j in enumerate(idx_)}
     edges_unordered = np.genfromtxt("{}{}.cites".format(path, dataset), dtype=np.int32)
     edges = np.array(list(map(idx_map.get, edges_unordered.flatten())), dtype=np.int32).reshape(edges_unordered.shape)
     adj = sp.coo_matrix((np.ones(edges.shape[0]), (edges[:, 0], edges[:, 1])), shape=(labels.shape[0], labels.shape[0]), dtype=np.float32)
