@@ -179,18 +179,20 @@ for epoch in range(args.epochs):
         output = model(features, adj)
         head_emb = output[head]
         tail_emb = output[tail]
+
+        neg_idx = torch.randint(0, 7127, (4, 2))
+        neg_head_emb = output[neg_idx[:, 0]]
+        neg_tail_emb = output[neg_idx[:, 1]]
+
         # loss_train = pred_loss(head_emb, tail_emb)
-        loss_train = -F.logsigmoid(-torch.mm(torch.transpose(head_emb, 0, 1), tail))
-        loss_train = torch.sum(loss_train)
+        posi = -F.logsigmoid(-torch.mm(torch.t(head_emb), tail_emb))
+        nega = F.logsigmoid(torch.mm(torch.t(neg_head_emb), neg_tail_emb))
+        loss_train = torch.sum(posi - nega)
 
         loss_train.backward()
         optimizer.step()
 
         print(loss_train)
-
-
-
-
 
 #     loss_values.append(train(epoch))
 
