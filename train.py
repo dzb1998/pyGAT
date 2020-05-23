@@ -171,7 +171,7 @@ data_loader = DataLoader(tensor_dataset, batch_size = batchsize, shuffle = True)
 for epoch in range(args.epochs):
     model.train()
 
-    for batch in range(data_loader):
+    for batch in tqdm(data_loader):
         head, tail  = tuple(t.to(device) for t in batch)
         t = time.time()
         model.train()

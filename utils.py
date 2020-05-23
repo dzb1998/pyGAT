@@ -63,7 +63,7 @@ def load_data(path="./data/cora/", dataset="cora"):
     for i, j in enumerate(idx_):
         idx_map_[j] = i
     # edges_unordered = np.genfromtxt("{}{}.cites".format(path, dataset), dtype=np.int32)
-    edges_unordered = np.genfromtxt('data/kg/trainvalidtest.txt', dtype=np.int32)
+    edges_unordered = np.genfromtxt('data/kg/train_nodes.txt', dtype=np.int32)
     # print(edges_unordered)
     edges = np.array(list(map(idx_map_.get, edges_unordered.flatten()))).reshape(edges_unordered.shape)
     # print(edges)
