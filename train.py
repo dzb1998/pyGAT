@@ -41,20 +41,23 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 # Load data
-adj, features, labels, idx_train, idx_val, idx_test = load_data()
+# adj, features, labels, idx_train, idx_val, idx_test = load_data()
+adj, features, idx_train, idx_val, idx_test = load_data()
 
 # Model and optimizer
 if args.sparse:
     model = SpGAT(nfeat=features.shape[1], 
                 nhid=args.hidden, 
-                nclass=int(labels.max()) + 1, 
+                # nclass=int(labels.max()) + 1, 
+                nclass = 128,
                 dropout=args.dropout, 
                 nheads=args.nb_heads, 
                 alpha=args.alpha)
 else:
     model = GAT(nfeat=features.shape[1], 
                 nhid=args.hidden, 
-                nclass=int(labels.max()) + 1, 
+                # nclass=int(labels.max()) + 1, 
+                nclass = 128,
                 dropout=args.dropout, 
                 nheads=args.nb_heads, 
                 alpha=args.alpha)
@@ -66,12 +69,13 @@ if args.cuda:
     model.cuda()
     features = features.cuda()
     adj = adj.cuda()
-    labels = labels.cuda()
+    # labels = labels.cuda()
     idx_train = idx_train.cuda()
     idx_val = idx_val.cuda()
     idx_test = idx_test.cuda()
 
-features, adj, labels = Variable(features), Variable(adj), Variable(labels)
+# features, adj, labels = Variable(features), Variable(adj), Variable(labels)
+features, adj = Variable(features), Variable(adj)
 
 
 def train(epoch):

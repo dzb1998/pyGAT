@@ -30,7 +30,7 @@ def load_data(path="./data/cora/", dataset="cora"):
     row_1 = []
     row_2 = []
 
-    with open('data/kg/output1.csv') as fin:
+    with open('data/kg/output.csv') as fin:
         for row in csv.reader(fin, delimiter=','):
             if row[0] == '':
                 continue
@@ -44,30 +44,37 @@ def load_data(path="./data/cora/", dataset="cora"):
             # print(row_1)
             # print(row_2)
 
-    print(row_1)
-
-
+    # print(row_1)
+    # print(row_2)
 
     idx_features_labels = np.genfromtxt("{}{}.content".format(path, dataset), dtype=np.dtype(str))
     features = sp.csr_matrix(idx_features_labels[:, 1:-1], dtype=np.float32)
-    labels = encode_onehot(idx_features_labels[:, -1])
+    # labels = encode_onehot(idx_features_labels[:, -1])
 
     # build graph
     
-#    idx = np.array(idx_features_labels[:, 0], dtype=np.int32)
-#    print(idx)
+    # idx = np.array(idx_features_labels[:, 0], dtype=np.int32)
+    # print(idx)
     idx_ = np.array(row_1, dtype=np.int32)
-    print(idx_)
-    
-    idx_map = {j: i for i, j in enumerate(idx_)}
-    edges_unordered = np.genfromtxt("{}{}.cites".format(path, dataset), dtype=np.int32)
-    edges = np.array(list(map(idx_map.get, edges_unordered.flatten())), dtype=np.int32).reshape(edges_unordered.shape)
-    adj = sp.coo_matrix((np.ones(edges.shape[0]), (edges[:, 0], edges[:, 1])), shape=(labels.shape[0], labels.shape[0]), dtype=np.float32)
+    # print(idx_)
+    # idx_map = {j: i for i, j in enumerate(idx)}
+    # print(idx_map)
+    # idx_map_ = {j: i for i, j in enumerate(idx_)}
+    # print(idx_map_)
+    idx_map_ = {}
+    for i, j in enumerate(idx_):
+        idx_map_[j] = i
+    # edges_unordered = np.genfromtxt("{}{}.cites".format(path, dataset), dtype=np.int32)
+    edges_unordered = np.genfromtxt('data/kg/train_nodes.txt', dtype=np.int32)
+    # print(edges_unordered)
+    edges = np.array(list(map(idx_map_.get, edges_unordered.flatten()))).reshape(edges_unordered.shape)
+    # print(edges)
+    adj = sp.coo_matrix((np.ones(edges.shape[0]), (edges[:, 0], edges[:, 1])), shape=(idx_.shape[0], idx_.shape[0]), dtype=np.float32)
 
     # build symmetric adjacency matrix
     adj = adj + adj.T.multiply(adj.T > adj) - adj.multiply(adj.T > adj)
 
-    features = normalize_features(features)
+    features = normalize_features(np.array(row_2))
     adj = normalize_adj(adj + sp.eye(adj.shape[0]))
 
     idx_train = range(140)
@@ -75,14 +82,16 @@ def load_data(path="./data/cora/", dataset="cora"):
     idx_test = range(500, 1500)
 
     adj = torch.FloatTensor(np.array(adj.todense()))
-    features = torch.FloatTensor(np.array(features.todense()))
-    labels = torch.LongTensor(np.where(labels)[1])
+    # features = torch.FloatTensor(np.array(features.todense()))
+    features = torch.FloatTensor(features)
+    # labels = torch.LongTensor(np.where(labels)[1])
 
     idx_train = torch.LongTensor(idx_train)
     idx_val = torch.LongTensor(idx_val)
     idx_test = torch.LongTensor(idx_test)
 
-    return adj, features, labels, idx_train, idx_val, idx_test
+    # return adj, features, labels, idx_train, idx_val, idx_test
+    return adj, features, idx_train, idx_val, idx_test
 
 
 def normalize_adj(mx):
