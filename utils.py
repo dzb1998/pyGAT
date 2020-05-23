@@ -88,8 +88,8 @@ def load_data(path="./data/cora/", dataset="cora"):
     idx_val = torch.LongTensor(idx_val)
     idx_test = torch.LongTensor(idx_test)
 
-    edges_head = torch.LongTensor(edges_unordered[:0])
-    edges_tail = torch.LongTensor(edges_unordered[:1])
+    edges_head = torch.LongTensor(edges_unordered[:, 0])
+    edges_tail = torch.LongTensor(edges_unordered[:, 1])
 
     # return adj, features, labels, idx_train, idx_val, idx_test
     return adj, features, idx_train, idx_val, idx_test, edges_head, edges_tail
