@@ -41,8 +41,6 @@ def load_data(path="./data/cora/", dataset="cora"):
             row_2_ = [float(i) for i in row_2_]
             row_1.append(row_1_)
             row_2.append(row_2_)
-            # print(row_1)
-            # print(row_2)
 
     # print(row_1)
     # print(row_2)
