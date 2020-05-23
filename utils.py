@@ -63,7 +63,7 @@ def load_data(path="./data/cora/", dataset="cora"):
     for i, j in enumerate(idx_):
         idx_map_[j] = i
     # edges_unordered = np.genfromtxt("{}{}.cites".format(path, dataset), dtype=np.int32)
-    edges_unordered = np.genfromtxt('data/kg/train_nodes.txt', dtype=np.int32)
+    edges_unordered = np.genfromtxt('data/kg/trainvalidtest.txt', dtype=np.int32)
     # print(edges_unordered)
     edges = np.array(list(map(idx_map_.get, edges_unordered.flatten()))).reshape(edges_unordered.shape)
     # print(edges)
@@ -75,9 +75,9 @@ def load_data(path="./data/cora/", dataset="cora"):
     features = normalize_features(np.array(row_2))
     adj = normalize_adj(adj + sp.eye(adj.shape[0]))
 
-    idx_train = range(140)
-    idx_val = range(200, 500)
-    idx_test = range(500, 1500)
+    idx_train = range(72826)
+    idx_val = range(72826, 81767)
+    idx_test = range(81767, 90730)
 
     adj = torch.FloatTensor(np.array(adj.todense()))
     # features = torch.FloatTensor(np.array(features.todense()))
@@ -88,8 +88,11 @@ def load_data(path="./data/cora/", dataset="cora"):
     idx_val = torch.LongTensor(idx_val)
     idx_test = torch.LongTensor(idx_test)
 
+    edges_head = torch.LongTensor(edges_unordered[:0])
+    edges_tail = torch.LongTensor(edges_unordered[:1])
+
     # return adj, features, labels, idx_train, idx_val, idx_test
-    return adj, features, idx_train, idx_val, idx_test
+    return adj, features, idx_train, idx_val, idx_test, edges_head, edges_tail
 
 
 def normalize_adj(mx):

@@ -16,6 +16,12 @@ from torch.autograd import Variable
 from utils import load_data, accuracy
 from models import GAT, SpGAT
 
+from torch.utils.data import (DataLoader,
+                             RandomSampler,
+                             SequentialSampler,
+                             TensorDataset)
+from tqdm import tqdm, trange
+
 # Training settings
 parser = argparse.ArgumentParser()
 parser.add_argument('--no-cuda', action='store_true', default=False, help='Disables CUDA training.')
@@ -42,7 +48,7 @@ if args.cuda:
 
 # Load data
 # adj, features, labels, idx_train, idx_val, idx_test = load_data()
-adj, features, idx_train, idx_val, idx_test = load_data()
+adj, features, idx_train, idx_val, idx_test, edges_head, edges_tail = load_data()
 
 # Model and optimizer
 if args.sparse:
@@ -73,6 +79,8 @@ if args.cuda:
     idx_train = idx_train.cuda()
     idx_val = idx_val.cuda()
     idx_test = idx_test.cuda()
+    edges_head = edges_head.cuda()
+    edges_tail = edges_tail.cuda()
 
 # features, adj, labels = Variable(features), Variable(adj), Variable(labels)
 features, adj = Variable(features), Variable(adj)
@@ -115,44 +123,106 @@ def compute_test():
           "loss= {:.4f}".format(loss_test.data[0]),
           "accuracy= {:.4f}".format(acc_test.data[0]))
 
+
+def pred_loss():
+    positive_sample, negative_sample, subsampling_weight, mode = next(train_iterator)
+
+    if args.cuda:
+        positive_sample = positive_sample.cuda()
+        negative_sample = negative_sample.cuda()
+        subsampling_weight = subsampling_weight.cuda()
+
+    negative_score = model((positive_sample, negative_sample), False, mode=mode)
+
+    # if args.negative_adversarial_sampling:
+    #     #In self-adversarial sampling, we do not apply back-propagation on the sampling weight
+    #     #print(negative_score, args.adversarial_temperature)
+    #     negative_score = (F.softmax(negative_score * args.adversarial_temperature, dim = 1).detach() 
+    #                       * F.logsigmoid(-negative_score)).sum(dim = 1)
+    # else:
+    negative_score = F.logsigmoid(-negative_score).mean(dim = 1)
+
+    positive_score = model(positive_sample)
+
+    positive_score = F.logsigmoid(positive_score).squeeze(dim = 1)
+
+    if args.uni_weight:
+        positive_sample_loss = - positive_score.mean()
+        negative_sample_loss = - negative_score.mean()
+    else:
+        positive_sample_loss = - (subsampling_weight * positive_score).sum()/subsampling_weight.sum()
+        negative_sample_loss = - (subsampling_weight * negative_score).sum()/subsampling_weight.sum()
+
+    loss = (positive_sample_loss + negative_sample_loss)/2
+    return loss
+
+
 # Train model
 t_total = time.time()
 loss_values = []
 bad_counter = 0
 best = args.epochs + 1
 best_epoch = 0
+
+batchsize = 4
+tensor_dataset = TensorDataset(edges_head, edges_tail)
+data_loader = DataLoader(tensor_dataset, batch_size = batchsize, shuffle = True)
+
 for epoch in range(args.epochs):
-    loss_values.append(train(epoch))
+    model.train()
 
-    torch.save(model.state_dict(), '{}.pkl'.format(epoch))
-    if loss_values[-1] < best:
-        best = loss_values[-1]
-        best_epoch = epoch
-        bad_counter = 0
-    else:
-        bad_counter += 1
+    for batch in range(data_loader):
+        head, tail  = tuple(t.to(device) for t in batch)
+        t = time.time()
+        model.train()
+        optimizer.zero_grad()
+        output = model(features, adj)
+        head_emb = output[head]
+        tail_emb = output[tail]
+        # loss_train = pred_loss(head_emb, tail_emb)
+        loss_train = -F.logsigmoid(-torch.mm(torch.transpose(head_emb, 0, 1), tail))
+        loss_train = torch.sum(loss_train)
 
-    if bad_counter == args.patience:
-        break
+        loss_train.backward()
+        optimizer.step()
 
-    files = glob.glob('*.pkl')
-    for file in files:
-        epoch_nb = int(file.split('.')[0])
-        if epoch_nb < best_epoch:
-            os.remove(file)
+        print(loss_train)
 
-files = glob.glob('*.pkl')
-for file in files:
-    epoch_nb = int(file.split('.')[0])
-    if epoch_nb > best_epoch:
-        os.remove(file)
 
-print("Optimization Finished!")
-print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
-# Restore best model
-print('Loading {}th epoch'.format(best_epoch))
-model.load_state_dict(torch.load('{}.pkl'.format(best_epoch)))
 
-# Testing
-compute_test()
+
+#     loss_values.append(train(epoch))
+
+#     torch.save(model.state_dict(), '{}.pkl'.format(epoch))
+#     if loss_values[-1] < best:
+#         best = loss_values[-1]
+#         best_epoch = epoch
+#         bad_counter = 0
+#     else:
+#         bad_counter += 1
+
+#     if bad_counter == args.patience:
+#         break
+
+#     files = glob.glob('*.pkl')
+#     for file in files:
+#         epoch_nb = int(file.split('.')[0])
+#         if epoch_nb < best_epoch:
+#             os.remove(file)
+
+# files = glob.glob('*.pkl')
+# for file in files:
+#     epoch_nb = int(file.split('.')[0])
+#     if epoch_nb > best_epoch:
+#         os.remove(file)
+
+# print("Optimization Finished!")
+# print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
+
+# # Restore best model
+# print('Loading {}th epoch'.format(best_epoch))
+# model.load_state_dict(torch.load('{}.pkl'.format(best_epoch)))
+
+# # Testing
+# compute_test()
