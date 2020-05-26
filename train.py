@@ -172,13 +172,13 @@ for epoch in range(args.epochs):
     model.train()
 
     for batch in tqdm(data_loader):
-        head, tail  = tuple(t.to(device) for t in batch)
+        head, tail  = tuple(t for t in batch)
         t = time.time()
         model.train()
         optimizer.zero_grad()
-        output = model(features, adj)
-        head_emb = output[head]
-        tail_emb = output[tail]
+        output = model(features[head]+features[tail], adj)
+        head_emb = output[0]
+        tail_emb = output[1]
 
         neg_idx = torch.randint(0, 7127, (4, 2))
         neg_head_emb = output[neg_idx[:, 0]]
