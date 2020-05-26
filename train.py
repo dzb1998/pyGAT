@@ -176,7 +176,7 @@ for epoch in range(args.epochs):
         t = time.time()
         model.train()
         optimizer.zero_grad()
-        output = model(features[head]+features[tail], adj)
+        output = model(features[head]+features[tail], adj[head]+adj[tail])
         head_emb = output[0]
         tail_emb = output[1]
 
